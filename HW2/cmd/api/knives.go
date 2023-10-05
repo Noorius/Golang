@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"hw2.nur.net/internal/data"
 	"net/http"
+	"time"
 )
 
 func (app *Application) createKnifeHandler(w http.ResponseWriter, r *http.Request) {
@@ -16,5 +18,19 @@ func (app *Application) showKnifeHandler(w http.ResponseWriter, r *http.Request)
 		http.NotFound(w, r)
 		return
 	}
-	fmt.Fprintf(w, "showing the detail of a knife with %d\n", id)
+
+	knives := data.Knife{
+		ID:        id,
+		CreatedAt: time.Now(),
+		Title:     "Bark River Classic",
+		Material:  "Steel",
+		Color:     "Silver",
+		Country:   "USA",
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"knife": knives}, nil)
+	if err != nil {
+		app.logger.Println(err)
+		http.Error(w, "Server cannot process your request", http.StatusInternalServerError)
+	}
 }
