@@ -9,4 +9,5 @@ type Knife struct {
 	Material  string    `json:"material"`
 	Color     string    `json:"color"`
 	Country   string    `json:"country,omitempty"` // Hides if empty
+	Duration  Duration  `json:"duration,omitempty"`
 }

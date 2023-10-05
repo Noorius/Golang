@@ -26,6 +26,7 @@ func (app *Application) showKnifeHandler(w http.ResponseWriter, r *http.Request)
 		Material:  "Steel",
 		Color:     "Silver",
 		Country:   "USA",
+		Duration:  2,
 	}
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"knife": knives}, nil)
