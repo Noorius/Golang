@@ -8,7 +8,21 @@ import (
 )
 
 func (app *Application) createKnifeHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "created a new knife")
+	var input struct {
+		Title    string `json:"title"`
+		Material string `json:"material"`
+		Color    string `json:"color"`
+		Country  string `json:"country"`
+		Duration int32  `json:"duration"`
+	}
+
+	err := app.readJSON(w, r, &input)
+	if err != nil {
+		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	fmt.Fprintf(w, "%+v\n", input)
 }
 
 func (app *Application) showKnifeHandler(w http.ResponseWriter, r *http.Request) {
