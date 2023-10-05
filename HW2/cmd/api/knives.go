@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"hw2.nur.net/internal/data"
+	"hw2.nur.net/internal/validator"
 	"net/http"
 	"time"
 )
@@ -19,6 +20,21 @@ func (app *Application) createKnifeHandler(w http.ResponseWriter, r *http.Reques
 	err := app.readJSON(w, r, &input)
 	if err != nil {
 		app.badRequestResponse(w, r, err)
+		return
+	}
+
+	knife := &data.Knife{
+		Title:    input.Title,
+		Material: input.Material,
+		Color:    input.Color,
+		Country:  input.Country,
+		Duration: input.Duration,
+	}
+
+	v := validator.New()
+
+	if data.ValidateKnife(v, knife); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
 
