@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 )
@@ -12,18 +11,12 @@ func (app *Application) HealthCheckHandler(w http.ResponseWriter, r *http.Reques
 		"environment": app.config.env,
 		"version":     version,
 	}
-	js, err := json.Marshal(data)
+	err := app.writeJSON(w, http.StatusOK, data, nil)
 
 	if err != nil {
 		app.logger.Println(err)
 		http.Error(w, "Server cannot process your request", http.StatusInternalServerError)
-		return
 	}
-
-	js = append(js, '\n')
-
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(js)
 }
 
 func (app *Application) CountHandler(w http.ResponseWriter, r *http.Request) {
