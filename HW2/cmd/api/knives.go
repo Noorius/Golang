@@ -9,11 +9,11 @@ import (
 
 func (app *Application) createKnifeHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Title    string `json:"title"`
-		Material string `json:"material"`
-		Color    string `json:"color"`
-		Country  string `json:"country"`
-		Duration int32  `json:"duration"`
+		Title    string        `json:"title"`
+		Material string        `json:"material"`
+		Color    string        `json:"color"`
+		Country  string        `json:"country"`
+		Duration data.Duration `json:"duration"`
 	}
 
 	err := app.readJSON(w, r, &input)
