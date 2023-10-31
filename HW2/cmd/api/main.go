@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	_ "github.com/lib/pq"
+	"hw2.nur.net/internal/data"
 	"log"
 	"net/http"
 	"os"
@@ -30,6 +31,7 @@ type config struct {
 type Application struct {
 	config config
 	logger *log.Logger
+	models data.Models
 }
 
 func main() {
@@ -58,6 +60,7 @@ func main() {
 	app := &Application{
 		config: cfg,
 		logger: logger,
+		models: data.NewModels(db),
 	}
 
 	srv := &http.Server{
