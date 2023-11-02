@@ -6,6 +6,7 @@ import (
 	"hw2.nur.net/internal/data"
 	"hw2.nur.net/internal/validator"
 	"net/http"
+	"strconv"
 )
 
 func (app *Application) createKnifeHandler(w http.ResponseWriter, r *http.Request) {
@@ -100,13 +101,20 @@ func (app *Application) updateKnifeHandler(w http.ResponseWriter, r *http.Reques
 
 	}
 
+	if r.Header.Get("X-Expected-Version") != "" {
+		if strconv.FormatInt(int64(knive.Version), 32) != r.Header.Get("X-Expected-Version") {
+			app.editConflictResponse(w, r)
+			return
+		}
+	}
+
 	// Declare an input struct to hold the expected data from the client.
 	var input struct {
-		Title    string        `json:"title"`
-		Material string        `json:"material"`
-		Color    string        `json:"color"`
-		Country  string        `json:"country"`
-		Duration data.Duration `json:"duration"`
+		Title    *string        `json:"title"`
+		Material *string        `json:"material"`
+		Color    *string        `json:"color"`
+		Country  *string        `json:"country"`
+		Duration *data.Duration `json:"duration"`
 	}
 
 	// Read the JSON request body data into the input struct.
@@ -117,11 +125,25 @@ func (app *Application) updateKnifeHandler(w http.ResponseWriter, r *http.Reques
 	}
 	// Copy the values from the request body to the appropriate fields of the movie
 	// record.
-	knive.Title = input.Title
-	knive.Material = input.Material
-	knive.Color = input.Color
-	knive.Country = input.Country
-	knive.Duration = input.Duration
+	if input.Title != nil {
+		knive.Title = *input.Title
+	}
+
+	if input.Material != nil {
+		knive.Material = *input.Material
+	}
+
+	if input.Color != nil {
+		knive.Color = *input.Color
+	}
+
+	if input.Country != nil {
+		knive.Country = *input.Country
+	}
+
+	if input.Duration != nil {
+		knive.Duration = *input.Duration
+	}
 	// Validate the updated movie record, sending the client a 422 Unprocessable Entity
 	// response if any checks fail.
 	v := validator.New()
@@ -132,11 +154,16 @@ func (app *Application) updateKnifeHandler(w http.ResponseWriter, r *http.Reques
 	// Pass the updated movie record to our new Update() method.
 	err = app.models.Knives.Update(knive)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		switch {
+		case errors.Is(err, data.ErrEditConflict):
+			app.editConflictResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
 		return
 	}
 	// Write the updated movie record in a JSON response.
-	err = app.writeJSON(w, http.StatusOK, envelope{"movie": knive}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"knife": knive}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

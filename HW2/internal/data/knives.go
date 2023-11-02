@@ -15,6 +15,7 @@ type Knife struct {
 	Color     string    `json:"color"`
 	Country   string    `json:"country,omitempty"` // Hides if empty
 	Duration  Duration  `json:"duration,omitempty"`
+	Version   int       `json:"version"`
 }
 
 func ValidateKnife(v *validator.Validator, knife *Knife) {
@@ -47,7 +48,7 @@ func (k KnifeModel) Get(id int64) (*Knife, error) {
 	}
 
 	query := `
-		SELECT id, created_at, title, material, color, country, duration
+		SELECT id, created_at, title, material, color, country, duration, version
 		FROM knives
 		WHERE id = $1`
 
@@ -61,6 +62,7 @@ func (k KnifeModel) Get(id int64) (*Knife, error) {
 		&knife.Color,
 		&knife.Country,
 		&knife.Duration,
+		&knife.Version,
 	)
 
 	if err != nil {
@@ -79,7 +81,7 @@ func (k KnifeModel) Update(kn *Knife) error {
 	query := `
 		UPDATE knives
 		SET title = $1, material = $2, color = $3, country = $4, duration = $5, version = version + 1
-		WHERE id = $6
+		WHERE id = $6 AND version = $7
 		RETURNING version`
 
 	args := []interface{}{
@@ -89,9 +91,19 @@ func (k KnifeModel) Update(kn *Knife) error {
 		kn.Country,
 		kn.Duration,
 		kn.ID,
+		kn.Version,
 	}
 
-	return k.DB.QueryRow(query, args...).Scan(&kn.ID)
+	err := k.DB.QueryRow(query, args...).Scan(&kn.Version)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+	return nil
 }
 
 func (k KnifeModel) Delete(id int64) error {
