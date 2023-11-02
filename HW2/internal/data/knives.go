@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"hw2.nur.net/internal/validator"
 	"time"
 )
@@ -38,12 +39,18 @@ func (k KnifeModel) Insert(kn *Knife) error {
 				VALUES ($1, $2, $3, $4, $5) 
 				RETURNING id, created_at`
 
-	args := []interface{}{kn.Title, kn.Material, kn.Color, kn.Country, kn.Duration}
+	args := []interface{}{
+		kn.Title,
+		kn.Material,
+		kn.Color,
+		kn.Country,
+		kn.Duration,
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	return k.DB.QueryRowContext(ctx, query, args...).Scan(&kn.ID, &kn.CreatedAt, &kn.Version)
+	return k.DB.QueryRowContext(ctx, query, args...).Scan(&kn.ID, &kn.CreatedAt)
 }
 
 func (k KnifeModel) Get(id int64) (*Knife, error) {
@@ -145,37 +152,45 @@ func (k KnifeModel) Delete(id int64) error {
 	return nil
 }
 
-func (k KnifeModel) GetAll(title string, material string, color string, country string, filters Filters) ([]*Knife, error) {
-	// Construct the SQL query to retrieve all movie records.
-	query := `
-		SELECT id, created_at, title, material, color, country, duration, version
+func (k KnifeModel) GetAll(title string, material string, color string, country string, filters Filters) ([]*Knife, Metadata, error) {
+
+	query := fmt.Sprintf(`
+		SELECT count(*) OVER(), id, created_at, title, material, color, country, duration, version
 		FROM knives
-		WHERE (LOWER(title) = LOWER($1) OR $1 = '')
-		AND (LOWER(material) = LOWER($2) OR $2 = '')
-		AND (LOWER(color) = LOWER($3) OR $3 = '')
-		AND (LOWER(country) = LOWER($4) OR $4 = '')
-		ORDER BY id`
-	// Create a context with a 3-second timeout.
+		WHERE
+		(to_tsvector('english', title) @@ plainto_tsquery('english', $1) OR $1 = '')
+		AND (to_tsvector('english', material) @@ plainto_tsquery('english', $2) OR $2 = '')
+		AND (to_tsvector('english', color) @@ plainto_tsquery('english', $3) OR $3 = '')
+		AND (to_tsvector('english', country) @@ plainto_tsquery('english', $4) OR $4 = '')
+		ORDER BY %s %s, id ASC
+		LIMIT $5 OFFSET $6
+		`, filters.sortColumn(), filters.sortDirection())
+
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	// Use QueryContext() to execute the query. This returns a sql.Rows resultset
-	// containing the result.
-	rows, err := k.DB.QueryContext(ctx, query, title, material, color, country)
-	if err != nil {
-		return nil, err
+
+	args := []interface{}{
+		title,
+		material,
+		color,
+		country,
+		filters.limit(),
+		filters.offset(),
 	}
-	// Importantly, defer a call to rows.Close() to ensure that the resultset is closed
-	// before GetAll() returns.
+
+	rows, err := k.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, Metadata{}, err
+	}
+
 	defer rows.Close()
-	// Initialize an empty slice to hold the movie data.
+	totalRecords := 0
 	knives := []*Knife{}
-	// Use rows.Next to iterate through the rows in the resultset.
 	for rows.Next() {
-		// Initialize an empty Movie struct to hold the data for an individual movie.
 		var knife Knife
-		// Scan the values from the row into the Movie struct. Again, note that we're
-		// using the pq.Array() adapter on the genres field here.
+
 		err := rows.Scan(
+			&totalRecords,
 			&knife.ID,
 			&knife.CreatedAt,
 			&knife.Title,
@@ -186,16 +201,14 @@ func (k KnifeModel) GetAll(title string, material string, color string, country 
 			&knife.Version,
 		)
 		if err != nil {
-			return nil, err
+			return nil, Metadata{}, err
 		}
-		// Add the Movie struct to the slice.
+
 		knives = append(knives, &knife)
 	}
-	// When the rows.Next() loop has finished, call rows.Err() to retrieve any error
-	// that was encountered during the iteration.
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, Metadata{}, err
 	}
-	// If everything went OK, then return the slice of movies.
-	return knives, nil
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+	return knives, metadata, nil
 }

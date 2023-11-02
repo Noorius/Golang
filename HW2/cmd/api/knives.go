@@ -75,7 +75,7 @@ func (app *Application) showKnifeHandler(w http.ResponseWriter, r *http.Request)
 
 	err = app.writeJSON(w, http.StatusOK, envelope{"knife": knives}, nil)
 	if err != nil {
-		app.logger.Println(err)
+		app.logger.PrintError(err, nil)
 		app.serverErrorResponse(w, r, err)
 	}
 }
@@ -224,13 +224,13 @@ func (app *Application) listKnivesHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	knives, err := app.models.Knives.GetAll(input.Title, input.Material, input.Color, input.Country, input.Filters)
+	knives, metadata, err := app.models.Knives.GetAll(input.Title, input.Material, input.Color, input.Country, input.Filters)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
 	// Send a JSON response containing the movie data.
-	err = app.writeJSON(w, http.StatusOK, envelope{"knives": knives}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"knives": knives, "metadata": metadata}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

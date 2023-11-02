@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func (app *Application) routes() *httprouter.Router {
+func (app *Application) routes() http.Handler {
 	router := httprouter.New()
 
 	router.NotFound = http.HandlerFunc(app.notFoundResponse)
@@ -18,5 +18,5 @@ func (app *Application) routes() *httprouter.Router {
 	router.HandlerFunc(http.MethodPatch, "/v1/knives/:id", app.updateKnifeHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/knives/:id", app.deleteKnifeHandler)
 
-	return router
+	return app.recoverPanic(app.rateLimit(router))
 }
