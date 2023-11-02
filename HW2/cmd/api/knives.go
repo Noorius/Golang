@@ -193,3 +193,45 @@ func (app *Application) deleteKnifeHandler(w http.ResponseWriter, r *http.Reques
 		app.serverErrorResponse(w, r, err)
 	}
 }
+
+func (app *Application) listKnivesHandler(w http.ResponseWriter, r *http.Request) {
+
+	var input struct {
+		Title    string
+		Material string
+		Color    string
+		Country  string
+		data.Filters
+	}
+
+	v := validator.New()
+
+	qs := r.URL.Query()
+
+	input.Title = app.readString(qs, "title", "")
+	input.Material = app.readString(qs, "material", "")
+	input.Color = app.readString(qs, "color", "")
+	input.Country = app.readString(qs, "country", "")
+
+	input.Filters.Page = app.readInt(qs, "page", 1, v)
+	input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
+
+	input.Filters.Sort = app.readString(qs, "sort", "id")
+	input.Filters.SortSafelist = []string{"id", "title", "material", "color", "country", "duration", "-id", "-title", "-material", "-color", "-country", "-duration"}
+
+	if data.ValidateFilters(v, input.Filters); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	knives, err := app.models.Knives.GetAll(input.Title, input.Material, input.Color, input.Country, input.Filters)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	// Send a JSON response containing the movie data.
+	err = app.writeJSON(w, http.StatusOK, envelope{"knives": knives}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+}
