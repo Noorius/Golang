@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"hw2.nur.net/internal/data"
 	"hw2.nur.net/internal/validator"
 	"net/http"
@@ -57,19 +56,12 @@ func (app *Application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		app.serverErrorResponse(w, r, err)
 	}
 
-	go func() {
-
-		defer func() {
-			if err := recover(); err != nil {
-				app.logger.PrintError(fmt.Errorf("%s", err), nil)
-			}
-		}()
-
+	app.background(func() {
 		err = app.mailer.Send(user.Email, "user_welcome.tmpl", user)
 		if err != nil {
 			app.logger.PrintError(err, nil)
 		}
-	}()
+	})
 	err = app.writeJSON(w, http.StatusAccepted, envelope{"user": user}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
