@@ -11,12 +11,12 @@ func (app *Application) routes() http.Handler {
 	router.NotFound = http.HandlerFunc(app.notFoundResponse)
 	router.MethodNotAllowed = http.HandlerFunc(app.methodNotAllowedResponse)
 
-	router.HandlerFunc(http.MethodGet, "/v1/knives", app.listKnivesHandler)
-	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.HealthCheckHandler)
-	router.HandlerFunc(http.MethodPost, "/v1/knives", app.createKnifeHandler)
-	router.HandlerFunc(http.MethodGet, "/v1/knives/:id", app.showKnifeHandler)
-	router.HandlerFunc(http.MethodPatch, "/v1/knives/:id", app.updateKnifeHandler)
-	router.HandlerFunc(http.MethodDelete, "/v1/knives/:id", app.deleteKnifeHandler)
+	router.HandlerFunc(http.MethodGet, "/v1/knives", app.requireActivatedUser(app.listKnivesHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.requireActivatedUser(app.HealthCheckHandler))
+	router.HandlerFunc(http.MethodPost, "/v1/knives", app.requireActivatedUser(app.createKnifeHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/knives/:id", app.requireActivatedUser(app.showKnifeHandler))
+	router.HandlerFunc(http.MethodPatch, "/v1/knives/:id", app.requireActivatedUser(app.updateKnifeHandler))
+	router.HandlerFunc(http.MethodDelete, "/v1/knives/:id", app.requireActivatedUser(app.deleteKnifeHandler))
 
 	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
 
