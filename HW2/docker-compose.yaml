@@ -1,0 +1,20 @@
+version: '3'
+services:
+  app:
+    build: ./
+    command: ./wait-for-postgres.sh postgres ./main
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    environment:
+      - POSTGRES_PASSWORD = pa55word
+
+  postgres:
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: greenlight
+      POSTGRES_USER: greenlight
+      POSTGRES_PASSWORD: pa55word
+    ports:
+      - "5432:5432"
